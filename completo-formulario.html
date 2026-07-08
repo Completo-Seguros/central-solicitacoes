@@ -911,9 +911,9 @@ const EJS_TPL_CORRETOR = 'template_bxribvo';   // confirmação para o corretor
 const EJS_TPL_INTERNO  = 'template_itvnscd';   // notificação interna
 
 const EMAIL_DESTINO = {
-  antecipacao : 'antecipacao.comissao@completoseguros.com.br',
-  emissao     : 'emissao.boleto@completoseguros.com.br',
-  quitacao    : 'quitacao.boleto@completoseguros.com.br',
+  antecipacao : 'diretoria@completoseguros.com.br',
+  emissao     : 'diretoria@completoseguros.com.br',
+  quitacao    : 'diretoria@completoseguros.com.br',
 };
 
 /* ── HTML DO E-MAIL (mesmo layout do formulário) ── */
@@ -1042,7 +1042,7 @@ function buildHtmlEmail(d, isInterno) {
 async function sendEmails(d) {
   const htmlEmail = buildHtmlEmail(d, false);
   const htmlInterno = buildHtmlEmail(d, true);
-  const emailDestino = EMAIL_DESTINO[d.tipo] || 'operacoes@completoseguros.com.br';
+  const emailDestino = EMAIL_DESTINO[d.tipo] || 'diretoria@completoseguros.com.br';
 
   const paramsCorretor = {
     tipo          : d.tipoLabel,
