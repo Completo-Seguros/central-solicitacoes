@@ -665,7 +665,7 @@
         <div class="field-group">
           <label id="label-documentos">Anexar Documentos <span class="req">*</span></label>
           <div class="file-zone" onclick="document.getElementById('doc-input').click()" id="drop-zone">
-            <input type="file" id="doc-input" multiple accept=".pdf,.jpg,.jpeg,.png,.zip">
+            <input type="file" id="doc-input" name="anexo" multiple accept=".pdf,.jpg,.jpeg,.png,.zip">
             <div class="file-zone-icon">📁</div>
             <p><span>Clique para selecionar</span> ou arraste aqui</p>
             <small>PDF, imagens ou ZIP · Máx. 48MB por arquivo</small>
@@ -1055,7 +1055,7 @@ async function sendEmails(d) {
   // Enviar e-mail de confirmação para o corretor (sem anexo)
   await emailjs.send(EJS_SERVICE_ID, EJS_TPL_CORRETOR, paramsCorretor);
 
-  // Enviar e-mail interno — com ou sem anexo
+  // Enviar e-mail interno — usa sendForm com o formulário real da página (suporta anexos)
   const paramsInterno = {
     tipo             : d.tipoLabel,
     nome_corretor    : d.nome_corretor,
@@ -1066,26 +1066,28 @@ async function sendEmails(d) {
     message          : htmlInterno,
   };
 
-  if (selectedFiles.length > 0) {
-    const fd = new FormData();
-    fd.append('service_id',  EJS_SERVICE_ID);
-    fd.append('template_id', EJS_TPL_INTERNO);
-    fd.append('user_id',     EJS_PUBLIC_KEY);
-    Object.entries(paramsInterno).forEach(([k, v]) => fd.append('template_params[' + k + ']', v));
-    selectedFiles.forEach(f => fd.append('template_params[anexo]', f, f.name));
+  // Injetar campos ocultos com os valores no formulário real
+  const form = document.getElementById('main-form');
+  const hiddenFields = [];
 
-    try {
-      const resp = await fetch('https://api.emailjs.com/api/v1.0/email/send-form', {
-        method: 'POST',
-        body: fd,
-      });
-      if (!resp.ok) throw new Error('API falhou: ' + resp.status);
-    } catch(err) {
-      console.warn('Envio com anexo falhou, enviando sem anexo...', err);
-      await emailjs.send(EJS_SERVICE_ID, EJS_TPL_INTERNO, paramsInterno);
-    }
-  } else {
+  Object.entries(paramsInterno).forEach(([k, v]) => {
+    const input = document.createElement('input');
+    input.type  = 'hidden';
+    input.name  = k;
+    input.value = v;
+    form.appendChild(input);
+    hiddenFields.push(input);
+  });
+
+  try {
+    // sendForm lê o <input name="anexo"> real do formulário — único jeito de enviar arquivo pelo EmailJS
+    await emailjs.sendForm(EJS_SERVICE_ID, EJS_TPL_INTERNO, form, EJS_PUBLIC_KEY);
+  } catch(err) {
+    console.warn('sendForm falhou, enviando sem anexo...', err);
     await emailjs.send(EJS_SERVICE_ID, EJS_TPL_INTERNO, paramsInterno);
+  } finally {
+    // Remover campos ocultos temporários
+    hiddenFields.forEach(el => form.removeChild(el));
   }
 }
 
