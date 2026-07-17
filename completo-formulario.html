@@ -1056,68 +1056,36 @@ async function sendEmails(d) {
   await emailjs.send(EJS_SERVICE_ID, EJS_TPL_CORRETOR, paramsCorretor);
 
   // Enviar e-mail interno — com ou sem anexo
+  const paramsInterno = {
+    tipo             : d.tipoLabel,
+    nome_corretor    : d.nome_corretor,
+    num_proposta     : d.num_proposta,
+    nome_beneficiario: d.nome_beneficiario,
+    email_destino    : emailDestino,
+    email1           : d.email1,
+    message          : htmlInterno,
+  };
+
   if (selectedFiles.length > 0) {
-    // Criar formulário oculto temporário para o emailjs.sendForm funcionar com anexo
-    const tempForm = document.createElement('form');
-    tempForm.style.display = 'none';
-    document.body.appendChild(tempForm);
-
-    // Campos de texto
-    const campos = {
-      tipo             : d.tipoLabel,
-      nome_corretor    : d.nome_corretor,
-      num_proposta     : d.num_proposta,
-      nome_beneficiario: d.nome_beneficiario,
-      email_destino    : emailDestino,
-      email1           : d.email1,
-      message          : htmlInterno,
-    };
-
-    Object.entries(campos).forEach(([name, value]) => {
-      const input = document.createElement('input');
-      input.type  = 'hidden';
-      input.name  = name;
-      input.value = value;
-      tempForm.appendChild(input);
-    });
-
-    // Campo de arquivo — usa DataTransfer para criar FileList com os arquivos selecionados
-    const fileInput = document.createElement('input');
-    fileInput.type  = 'file';
-    fileInput.name  = 'anexo';
-    fileInput.multiple = true;
-    const dt = new DataTransfer();
-    selectedFiles.forEach(f => dt.items.add(f));
-    fileInput.files = dt.files;
-    tempForm.appendChild(fileInput);
+    const fd = new FormData();
+    fd.append('service_id',  EJS_SERVICE_ID);
+    fd.append('template_id', EJS_TPL_INTERNO);
+    fd.append('user_id',     EJS_PUBLIC_KEY);
+    Object.entries(paramsInterno).forEach(([k, v]) => fd.append('template_params[' + k + ']', v));
+    selectedFiles.forEach(f => fd.append('template_params[anexo]', f, f.name));
 
     try {
-      await emailjs.sendForm(EJS_SERVICE_ID, EJS_TPL_INTERNO, tempForm, EJS_PUBLIC_KEY);
-    } catch(err) {
-      console.warn('sendForm com anexo falhou, enviando sem anexo...', err);
-      await emailjs.send(EJS_SERVICE_ID, EJS_TPL_INTERNO, {
-        tipo             : d.tipoLabel,
-        nome_corretor    : d.nome_corretor,
-        num_proposta     : d.num_proposta,
-        nome_beneficiario: d.nome_beneficiario,
-        email_destino    : emailDestino,
-        email1           : d.email1,
-        message          : htmlInterno,
+      const resp = await fetch('https://api.emailjs.com/api/v1.0/email/send-form', {
+        method: 'POST',
+        body: fd,
       });
-    } finally {
-      document.body.removeChild(tempForm);
+      if (!resp.ok) throw new Error('API falhou: ' + resp.status);
+    } catch(err) {
+      console.warn('Envio com anexo falhou, enviando sem anexo...', err);
+      await emailjs.send(EJS_SERVICE_ID, EJS_TPL_INTERNO, paramsInterno);
     }
   } else {
-    // Sem arquivos: envio normal
-    await emailjs.send(EJS_SERVICE_ID, EJS_TPL_INTERNO, {
-      tipo             : d.tipoLabel,
-      nome_corretor    : d.nome_corretor,
-      num_proposta     : d.num_proposta,
-      nome_beneficiario: d.nome_beneficiario,
-      email_destino    : emailDestino,
-      email1           : d.email1,
-      message          : htmlInterno,
-    });
+    await emailjs.send(EJS_SERVICE_ID, EJS_TPL_INTERNO, paramsInterno);
   }
 }
 
