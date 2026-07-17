@@ -1040,18 +1040,18 @@ function buildHtmlEmail(d, isInterno) {
 
 /* ── ENVIO VIA EMAILJS ── */
 async function sendEmails(d) {
-  const htmlEmail = buildHtmlEmail(d, false);
+  const htmlEmail   = buildHtmlEmail(d, false);
   const htmlInterno = buildHtmlEmail(d, true);
   const emailDestino = EMAIL_DESTINO[d.tipo] || 'diretoria@completoseguros.com.br';
 
   const paramsCorretor = {
-    tipo          : d.tipoLabel,
-    nome_corretor : d.nome_corretor,
-    num_proposta  : d.num_proposta,
+    tipo             : d.tipoLabel,
+    nome_corretor    : d.nome_corretor,
+    num_proposta     : d.num_proposta,
     nome_beneficiario: d.nome_beneficiario,
-    email1        : d.email1,
-    email2        : d.email2 || '',
-    message       : htmlEmail,
+    email1           : d.email1,
+    email2           : d.email2 || '',
+    message          : htmlEmail,
   };
 
   const paramsInterno = {
@@ -1064,8 +1064,42 @@ async function sendEmails(d) {
     message          : htmlInterno,
   };
 
+  // Enviar e-mail de confirmação para o corretor (sem anexo)
   await emailjs.send(EJS_SERVICE_ID, EJS_TPL_CORRETOR, paramsCorretor);
-  await emailjs.send(EJS_SERVICE_ID, EJS_TPL_INTERNO,  paramsInterno);
+
+  // Enviar e-mail interno com anexo (se houver arquivos)
+  if (selectedFiles.length > 0) {
+    // EmailJS Form File Attachment: usar sendForm com um FormData
+    const formData = new FormData();
+
+    // Parâmetros textuais
+    Object.entries(paramsInterno).forEach(([k, v]) => formData.append(k, v));
+
+    // Credenciais EmailJS
+    formData.append('service_id',  EJS_SERVICE_ID);
+    formData.append('template_id', EJS_TPL_INTERNO);
+    formData.append('user_id',     EJS_PUBLIC_KEY);
+
+    // Anexar todos os arquivos com a chave "anexo"
+    selectedFiles.forEach(file => formData.append('anexo', file, file.name));
+
+    const response = await fetch(`https://api.emailjs.com/api/v1.0/email/send-form`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'origin': window.location.origin,
+      }
+    });
+
+    // Fallback: se a API sendForm não estiver disponível, envia sem anexo
+    if (!response.ok) {
+      console.warn('sendForm falhou, enviando sem anexo...');
+      await emailjs.send(EJS_SERVICE_ID, EJS_TPL_INTERNO, paramsInterno);
+    }
+  } else {
+    // Sem arquivos: envio normal
+    await emailjs.send(EJS_SERVICE_ID, EJS_TPL_INTERNO, paramsInterno);
+  }
 }
 
 document.getElementById('main-form').addEventListener('submit', async function(e) {
