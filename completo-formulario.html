@@ -1070,7 +1070,9 @@ async function sendEmails(d) {
       fd.append('folder', 'completo-seguros');
 
       try {
-        const resp = await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD_NAME}/auto/upload`, {
+        // PDF vai para /raw/upload, imagens para /image/upload
+      const resourceType = file.type === 'application/pdf' ? 'raw' : 'image';
+      const resp = await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD_NAME}/${resourceType}/upload`, {
           method: 'POST',
           body: fd,
         });
