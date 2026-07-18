@@ -906,6 +906,10 @@ function collectData() {
 
 /* ── EMAILJS CONFIG ── */
 const EJS_PUBLIC_KEY   = 'MyzTkaJXx8Wopd6Xx';
+
+/* ── CLOUDINARY CONFIG ── */
+const CLD_CLOUD_NAME  = 'xdqcgi6p';
+const CLD_UPLOAD_PRESET = 'completo_anexos';
 const EJS_SERVICE_ID   = 'service_ex5wqvp';
 const EJS_TPL_CORRETOR = 'template_bxribvo';   // confirmação para o corretor
 const EJS_TPL_INTERNO  = 'template_itvnscd';   // notificação interna
@@ -1055,40 +1059,63 @@ async function sendEmails(d) {
   // Enviar e-mail de confirmação para o corretor (sem anexo)
   await emailjs.send(EJS_SERVICE_ID, EJS_TPL_CORRETOR, paramsCorretor);
 
-  // Enviar e-mail interno — usa sendForm com o formulário real da página (suporta anexos)
-  const paramsInterno = {
+  // Upload dos arquivos para Cloudinary e envio do e-mail interno com links
+  const linksAnexos = [];
+
+  if (selectedFiles.length > 0) {
+    for (const file of selectedFiles) {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('upload_preset', CLD_UPLOAD_PRESET);
+      fd.append('folder', 'completo-seguros');
+
+      try {
+        const resp = await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD_NAME}/auto/upload`, {
+          method: 'POST',
+          body: fd,
+        });
+        const data = await resp.json();
+        if (data.secure_url) {
+          linksAnexos.push({ nome: file.name, url: data.secure_url });
+        }
+      } catch(err) {
+        console.warn('Erro no upload do arquivo:', file.name, err);
+      }
+    }
+  }
+
+  // Montar bloco HTML dos links para o e-mail
+  let anexosHtml = '';
+  if (linksAnexos.length > 0) {
+    const itens = linksAnexos.map(a =>
+      `<tr><td style="padding:8px 16px;font-size:13px">📎 <a href="${a.url}" style="color:#3B7EB5;font-weight:600" target="_blank">${a.nome}</a></td></tr>`
+    ).join('');
+    anexosHtml = `
+      <div style="background:#F9FAFB;border-radius:10px;border:1px solid #E5E7EB;overflow:hidden;margin-bottom:16px">
+        <div style="padding:10px 16px;background:#EAF3FB;border-bottom:1px solid #E5E7EB">
+          <p style="margin:0;font-size:11px;font-weight:700;color:#2A6496;text-transform:uppercase;letter-spacing:0.5px">📎 Documentos Anexados</p>
+        </div>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+          ${itens}
+        </table>
+      </div>`;
+  }
+
+  // Adicionar bloco de anexos ao e-mail interno
+  const htmlInternoFinal = htmlInterno.replace(
+    '<p style="font-size:12px;color:#9CA3AF;margin:20px 0 0',
+    anexosHtml + '<p style="font-size:12px;color:#9CA3AF;margin:20px 0 0'
+  );
+
+  await emailjs.send(EJS_SERVICE_ID, EJS_TPL_INTERNO, {
     tipo             : d.tipoLabel,
     nome_corretor    : d.nome_corretor,
     num_proposta     : d.num_proposta,
     nome_beneficiario: d.nome_beneficiario,
     email_destino    : emailDestino,
     email1           : d.email1,
-    message          : htmlInterno,
-  };
-
-  // Injetar campos ocultos com os valores no formulário real
-  const form = document.getElementById('main-form');
-  const hiddenFields = [];
-
-  Object.entries(paramsInterno).forEach(([k, v]) => {
-    const input = document.createElement('input');
-    input.type  = 'hidden';
-    input.name  = k;
-    input.value = v;
-    form.appendChild(input);
-    hiddenFields.push(input);
+    message          : htmlInternoFinal,
   });
-
-  try {
-    // sendForm lê o <input name="anexo"> real do formulário — único jeito de enviar arquivo pelo EmailJS
-    await emailjs.sendForm(EJS_SERVICE_ID, EJS_TPL_INTERNO, form, EJS_PUBLIC_KEY);
-  } catch(err) {
-    console.warn('sendForm falhou, enviando sem anexo...', err);
-    await emailjs.send(EJS_SERVICE_ID, EJS_TPL_INTERNO, paramsInterno);
-  } finally {
-    // Remover campos ocultos temporários
-    hiddenFields.forEach(el => form.removeChild(el));
-  }
 }
 
 document.getElementById('main-form').addEventListener('submit', async function(e) {
