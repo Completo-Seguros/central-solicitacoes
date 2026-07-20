@@ -1078,7 +1078,9 @@ async function sendEmails(d) {
         });
         const data = await resp.json();
         if (data.secure_url) {
-          linksAnexos.push({ nome: file.name, url: data.secure_url });
+          // Forçar download direto adicionando fl_attachment na URL do Cloudinary
+          const urlDownload = data.secure_url.replace('/upload/', '/upload/fl_attachment/');
+          linksAnexos.push({ nome: file.name, url: urlDownload });
         }
       } catch(err) {
         console.warn('Erro no upload do arquivo:', file.name, err);
