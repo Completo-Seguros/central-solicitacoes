@@ -1070,6 +1070,8 @@ async function sendEmails(d) {
       fd.append('file', file);
       fd.append('upload_preset', CLD_UPLOAD_PRESET);
       fd.append('public_id', 'completo-seguros/' + Date.now() + '-' + file.name.replace(/\s/g,'_'));
+      fd.append('access_mode', 'public');
+      fd.append('type', 'upload');
 
       // Usar sempre image/upload — Cloudinary aceita PDF via image endpoint com fl_attachment
       const endpoint = 'https://api.cloudinary.com/v1_1/' + CLD_CLOUD_NAME + '/image/upload';
@@ -1082,7 +1084,19 @@ async function sendEmails(d) {
       console.log('Cloudinary response:', JSON.stringify(data));
 
       if (data.secure_url) {
-        linksAnexos.push({ nome: file.name, url: data.secure_url });
+        // Montar URL pública direta sem autenticação
+        // Para PDF: trocar /image/upload/ por /image/upload/fl_attachment/
+        // e garantir que termina com extensão correta
+        let url = data.secure_url;
+        const isPdf = file.name.toLowerCase().endsWith('.pdf');
+        if (isPdf && !url.includes('fl_attachment')) {
+          url = url.replace('/upload/', '/upload/fl_attachment/');
+          // Garantir extensão .pdf na URL
+          if (!url.toLowerCase().endsWith('.pdf')) {
+            url = url + '.pdf';
+          }
+        }
+        linksAnexos.push({ nome: file.name, url: url });
       } else {
         const errMsg = (data.error && data.error.message) ? data.error.message : 'falha no upload';
         showToast('❌ Erro ao enviar ' + file.name + ': ' + errMsg);
