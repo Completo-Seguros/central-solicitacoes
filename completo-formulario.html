@@ -1063,29 +1063,27 @@ async function sendEmails(d) {
   const linksAnexos = [];
 
   if (selectedFiles.length > 0) {
+    showToast('⬆️ Enviando documentos...');
     for (const file of selectedFiles) {
       const fd = new FormData();
       fd.append('file', file);
       fd.append('upload_preset', CLD_UPLOAD_PRESET);
-      fd.append('folder', 'completo-seguros');
-      fd.append('access_mode', 'public');
-      fd.append('type', 'upload');
+      fd.append('public_id', 'completo-seguros/' + Date.now() + '-' + file.name.replace(/\s/g,'_'));
 
-      try {
-        // PDF vai para /raw/upload, imagens para /image/upload
-      const resourceType = file.type === 'application/pdf' ? 'raw' : 'image';
-      const resp = await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD_NAME}/${resourceType}/upload`, {
-          method: 'POST',
-          body: fd,
-        });
-        const data = await resp.json();
-        if (data.secure_url) {
-          // Forçar download direto adicionando fl_attachment na URL do Cloudinary
-          const urlDownload = data.secure_url.replace('/upload/', '/upload/fl_attachment/');
-          linksAnexos.push({ nome: file.name, url: urlDownload });
-        }
-      } catch(err) {
-        console.warn('Erro no upload do arquivo:', file.name, err);
+      const resp = await fetch('https://api.cloudinary.com/v1_1/' + CLD_CLOUD_NAME + '/auto/upload', {
+        method: 'POST',
+        body: fd,
+      });
+
+      const data = await resp.json();
+      console.log('Cloudinary response:', JSON.stringify(data));
+
+      if (data.secure_url) {
+        linksAnexos.push({ nome: file.name, url: data.secure_url });
+      } else {
+        const errMsg = (data.error && data.error.message) ? data.error.message : 'falha no upload';
+        showToast('❌ Erro ao enviar ' + file.name + ': ' + errMsg);
+        throw new Error('Upload falhou: ' + errMsg);
       }
     }
   }
