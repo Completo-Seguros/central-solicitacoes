@@ -1069,9 +1069,8 @@ async function sendEmails(d) {
       const fd = new FormData();
       fd.append('file', file);
       fd.append('upload_preset', CLD_UPLOAD_PRESET);
-      fd.append('public_id', 'completo-seguros/' + Date.now() + '-' + file.name.replace(/\s/g,'_'));
-      fd.append('access_mode', 'public');
-      fd.append('type', 'upload');
+
+
 
       // Usar sempre image/upload — Cloudinary aceita PDF via image endpoint com fl_attachment
       const endpoint = 'https://api.cloudinary.com/v1_1/' + CLD_CLOUD_NAME + '/image/upload';
