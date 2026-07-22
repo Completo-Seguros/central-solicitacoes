@@ -522,9 +522,19 @@
             <span class="field-error" id="err-email1">E-mail inválido</span>
           </div>
           <div class="field-group">
-            <label>E-mail Adicional</label>
-            <input type="email" id="email2" placeholder="outro@email.com">
-            <p class="field-hint">Opcional – para cópia</p>
+            <label>Deseja adicionar um e-mail para cópia?</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="tem_email2" value="nao" checked onchange="toggleEmail2(this.value)"> Não
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="tem_email2" value="sim" onchange="toggleEmail2(this.value)"> Sim
+              </label>
+            </div>
+            <div id="row-email2" style="display:none; margin-top:10px">
+              <input type="email" id="email2" placeholder="outro@email.com">
+              <p class="field-hint">Este e-mail receberá uma cópia da confirmação</p>
+            </div>
           </div>
         </div>
       </div>
@@ -753,6 +763,12 @@ function selectTipo(tipo) {
 }
 
 /* ── DESCONTO CONDICIONAL ── */
+function toggleEmail2(val) {
+  const row = document.getElementById('row-email2');
+  row.style.display = val === 'sim' ? 'block' : 'none';
+  if (val !== 'sim') document.getElementById('email2').value = '';
+}
+
 function toggleOutraOperadora(val) {
   const box = document.getElementById('row-outra-operadora');
   box.style.display = val === 'outra' ? 'block' : 'none';
