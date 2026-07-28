@@ -317,6 +317,11 @@
             <div class="tipo-label">Quitação de Boleto</div>
             <div class="tipo-desc">Confirmação de pagamento realizado</div>
           </div>
+          <div class="tipo-btn" onclick="selectTipo('reembolso')" id="btn-reembolso">
+            <div class="tipo-icon">💰</div>
+            <div class="tipo-label">Reembolso</div>
+            <div class="tipo-desc">Solicitação de reembolso com dados bancários</div>
+          </div>
         </div>
         <span class="field-error" id="err-tipo" style="display:none;margin-top:4px">Selecione o tipo de solicitação</span>
       </div>
@@ -651,6 +656,48 @@
       </div>
     </div>
 
+    <!-- ===================== REEMBOLSO: campos específicos ===================== -->
+    <div class="section-card dynamic-section" id="sec-reembolso">
+      <div class="section-header">
+        <div class="section-icon icon-blue">💰</div>
+        <h2>Dados para Reembolso</h2>
+      </div>
+      <div class="section-body">
+        <div class="fields-grid">
+          <div class="field-group">
+            <label>Banco <span class="req">*</span></label>
+            <input type="text" id="banco" placeholder="Ex: Itaú, Bradesco, Nubank...">
+            <span class="field-error" id="err-banco">Campo obrigatório</span>
+          </div>
+          <div class="field-group">
+            <label>Agência <span class="req">*</span></label>
+            <input type="text" id="agencia" placeholder="Ex: 0001">
+            <span class="field-error" id="err-agencia">Campo obrigatório</span>
+          </div>
+          <div class="field-group">
+            <label>Conta <span class="req">*</span></label>
+            <input type="text" id="conta" placeholder="Ex: 12345-6">
+            <span class="field-error" id="err-conta">Campo obrigatório</span>
+          </div>
+          <div class="field-group">
+            <label>Titular da Conta <span class="req">*</span></label>
+            <input type="text" id="titular_conta" placeholder="Nome completo do titular">
+            <span class="field-error" id="err-titular_conta">Campo obrigatório</span>
+          </div>
+          <div class="field-group">
+            <label>CPF ou CNPJ <span class="req">*</span></label>
+            <input type="text" id="cpf_cnpj" placeholder="000.000.000-00 ou 00.000.000/0001-00">
+            <span class="field-error" id="err-cpf_cnpj">Campo obrigatório</span>
+          </div>
+          <div class="field-group">
+            <label>Valor do Reembolso (R$) <span class="req">*</span></label>
+            <input type="text" id="valor_reembolso" placeholder="R$ 0,00">
+            <span class="field-error" id="err-valor_reembolso">Campo obrigatório</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ===================== OBSERVAÇÕES (comum) ===================== -->
     <div class="section-card dynamic-section" id="sec-notas">
       <div class="section-header">
@@ -749,6 +796,7 @@ function selectTipo(tipo) {
   document.getElementById('sec-antecipacao').classList.toggle('visible', tipo === 'antecipacao');
   document.getElementById('sec-emissao').classList.toggle('visible',     tipo === 'emissao');
   document.getElementById('sec-quitacao').classList.toggle('visible',    tipo === 'quitacao');
+  document.getElementById('sec-reembolso').classList.toggle('visible',   tipo === 'reembolso');
 
   // Operadora: só para emissão e quitação
   document.getElementById('row-operadora').style.display =
@@ -865,6 +913,13 @@ function validateForm() {
   }
 
   // Quitação
+  if (tipoAtual === 'reembolso') {
+    ['banco','agencia','conta','titular_conta','cpf_cnpj','valor_reembolso'].forEach(f => {
+      const el = document.getElementById(f);
+      if (!el.value.trim()) { showError(f); valid = false; } else clearError(f);
+    });
+  }
+
   if (tipoAtual === 'quitacao') {
     ['valor_quitacao','data_pagamento'].forEach(id => {
       const el = document.getElementById(id);
@@ -872,7 +927,7 @@ function validateForm() {
     });
   }
 
-  if (tipoAtual !== 'emissao' && selectedFiles.length === 0) { showError('documentos'); valid = false; } else clearError('documentos');
+  if (['antecipacao','quitacao','reembolso'].includes(tipoAtual) && selectedFiles.length === 0) { showError('documentos'); valid = false; } else clearError('documentos');
 
   return valid;
 }
@@ -884,7 +939,7 @@ function radio(name) { const el = document.querySelector(`input[name="${name}"]:
 function collectData() {
   const base = {
     tipo: tipoAtual,
-    tipoLabel: { antecipacao: 'Antecipação', emissao: 'Emissão de Boleto', quitacao: 'Quitação de Boleto' }[tipoAtual],
+    tipoLabel: { antecipacao: 'Antecipação', emissao: 'Emissão de Boleto', quitacao: 'Quitação de Boleto', reembolso: 'Reembolso' }[tipoAtual],
     nome_beneficiario: get('nome_beneficiario'),
     num_proposta: get('num_proposta'),
     num_documento: get('num_documento'),
@@ -911,10 +966,27 @@ function collectData() {
       descricao_emissao: get('descricao_emissao'),
     });
   }
+  if (tipoAtual === 'reembolso') {
+    ['banco','agencia','conta','titular_conta','cpf_cnpj','valor_reembolso'].forEach(f => {
+      const el = document.getElementById(f);
+      if (!el.value.trim()) { showError(f); valid = false; } else clearError(f);
+    });
+  }
+
   if (tipoAtual === 'quitacao') {
     Object.assign(base, {
       valor_quitacao: get('valor_quitacao'),
       data_pagamento: get('data_pagamento'),
+    });
+  }
+  if (tipoAtual === 'reembolso') {
+    Object.assign(base, {
+      banco          : get('banco'),
+      agencia        : get('agencia'),
+      conta          : get('conta'),
+      titular_conta  : get('titular_conta'),
+      cpf_cnpj       : get('cpf_cnpj'),
+      valor_reembolso: get('valor_reembolso'),
     });
   }
   return base;
@@ -934,6 +1006,7 @@ const EMAIL_DESTINO = {
   antecipacao : 'diretoria@completoseguros.com.br',
   emissao     : 'diretoria@completoseguros.com.br',
   quitacao    : 'diretoria@completoseguros.com.br',
+  reembolso   : 'diretoria@completoseguros.com.br',
 };
 
 /* ── HTML DO E-MAIL (mesmo layout do formulário) ── */
@@ -961,11 +1034,19 @@ function buildHtmlEmail(d, isInterno) {
       <tr style="background:#F9FAFB"><td style="padding:10px 16px;color:#6B7280;font-size:13px">Valor</td><td style="padding:10px 16px;color:#1F2937;font-weight:500;font-size:13px">${d.valor_emissao}</td></tr>
       <tr><td style="padding:10px 16px;color:#6B7280;font-size:13px">Vencimento</td><td style="padding:10px 16px;color:#1F2937;font-weight:500;font-size:13px">${d.vencimento_emissao}</td></tr>
       <tr style="background:#F9FAFB"><td style="padding:10px 16px;color:#6B7280;font-size:13px">Descrição</td><td style="padding:10px 16px;color:#1F2937;font-weight:500;font-size:13px">${d.descricao_emissao}</td></tr>`;
-  } else {
+  } else if (d.tipo === 'quitacao') {
     detalhesHtml = `
       <tr><td style="padding:10px 16px;color:#6B7280;width:45%;font-size:13px">Operadora</td><td style="padding:10px 16px;color:#1F2937;font-weight:500;font-size:13px">${d.operadora}</td></tr>
       <tr style="background:#F9FAFB"><td style="padding:10px 16px;color:#6B7280;font-size:13px">Valor Pago</td><td style="padding:10px 16px;color:#1F2937;font-weight:500;font-size:13px">${d.valor_quitacao}</td></tr>
       <tr><td style="padding:10px 16px;color:#6B7280;font-size:13px">Data Pagamento</td><td style="padding:10px 16px;color:#1F2937;font-weight:500;font-size:13px">${d.data_pagamento}</td></tr>`;
+  } else {
+    detalhesHtml = `
+      <tr><td style="padding:10px 16px;color:#6B7280;width:45%;font-size:13px">Banco</td><td style="padding:10px 16px;color:#1F2937;font-weight:500;font-size:13px">${d.banco}</td></tr>
+      <tr style="background:#F9FAFB"><td style="padding:10px 16px;color:#6B7280;font-size:13px">Agência</td><td style="padding:10px 16px;color:#1F2937;font-weight:500;font-size:13px">${d.agencia}</td></tr>
+      <tr><td style="padding:10px 16px;color:#6B7280;font-size:13px">Conta</td><td style="padding:10px 16px;color:#1F2937;font-weight:500;font-size:13px">${d.conta}</td></tr>
+      <tr style="background:#F9FAFB"><td style="padding:10px 16px;color:#6B7280;font-size:13px">Titular</td><td style="padding:10px 16px;color:#1F2937;font-weight:500;font-size:13px">${d.titular_conta}</td></tr>
+      <tr><td style="padding:10px 16px;color:#6B7280;font-size:13px">CPF/CNPJ</td><td style="padding:10px 16px;color:#1F2937;font-weight:500;font-size:13px">${d.cpf_cnpj}</td></tr>
+      <tr style="background:#F9FAFB"><td style="padding:10px 16px;color:#6B7280;font-size:13px">Valor</td><td style="padding:10px 16px;color:#1F2937;font-weight:500;font-size:13px">${d.valor_reembolso}</td></tr>`;
   }
 
   const saudacao = isInterno
@@ -1187,7 +1268,7 @@ function closeModal() {
   selectedFiles = [];
   renderFileList();
   ['antecipacao','emissao','quitacao'].forEach(t => document.getElementById('btn-' + t).classList.remove('active'));
-  ['sec-beneficiario','sec-corretor','sec-antecipacao','sec-emissao','sec-quitacao','sec-notas','sec-docs','sec-submit'].forEach(id => {
+  ['sec-beneficiario','sec-corretor','sec-antecipacao','sec-emissao','sec-quitacao','sec-reembolso','sec-notas','sec-docs','sec-submit'].forEach(id => {
     document.getElementById(id).classList.remove('visible');
   });
   document.getElementById('placeholder').style.display = '';
@@ -1249,6 +1330,7 @@ function maskMoney(id) {
 maskMoney('valor_proposta');
 maskMoney('valor_emissao');
 maskMoney('valor_quitacao');
+  maskMoney('valor_reembolso');
 </script>
 </body>
 </html>
